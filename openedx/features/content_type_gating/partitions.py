@@ -21,7 +21,6 @@ LOG = logging.getLogger(__name__)
 
 CONTENT_GATING_PARTITION_ID = 51
 
-
 def create_content_gating_partition(course):
     """
     Create and return the Content Gating user partition.
@@ -171,8 +170,47 @@ class ContentTypeGatingPartitionScheme(object):
         if get_course_masquerade(user, course_key) and not is_masquerading_as_specific_student(user, course_key):
             return get_masquerading_user_group(course_key, user, user_partition)
 
+        # TODO: here is where we add the waffle flag, if not enabled treat everyone like a full-acces user, otherwise do the logic below this comment
         # For now, treat everyone as a Full-access user, until we have the rest of the
         # feature gating logic in place.
+        CourseMode = apps.get_model('course_modes.CourseMode')
+        modes = CourseMode.modes_for_course_dict(course_key)
+
+        # If there is no verified mode, all users are considered UNLOCKED
+        if not CourseMode.has_verified_mode(modes):
+            return cls.UNLOCKED
+
+        CourseEnrollment = apps.get_model('student.CourseEnrollment')
+
+        enrollment = CourseEnrollment.get_enrollment(user, course_key)
+        if not waffle.flag_is_active(crum.get_current_request(), 'content_type_gating.debug'):
+            return cls.UNLOCKED
+
+        mode_slug, is_active = CourseEnrollment.enrollment_mode_for_user(user, course_key)
+
+        if mode_slug and is_active:
+            course_mode = CourseMode.mode_for_course(
+                course_key,
+                mode_slug,
+                modes=CourseMode.modes_for_course(course_key, include_expired=True, only_selectable=False),
+            )
+            if course_mode is None:
+                LOG.error(
+                    "User %s is in an unknown CourseMode '%s' for course %s. Unlocking content for this user",
+                    user.username,
+                    mode_slug,
+                    course_key,
+                )
+                return cls.UNLOCKED
+
+            if mode_slug == CourseMode.AUDIT:
+                # Check the user email exceptions here:
+                return cls.LOCKED
+            else:
+                return cls.UNLOCKED
+        else:
+            # Unenrolled users don't get gated content
+            return cls.LOCKED
 
     @classmethod
     def create_user_partition(cls, id, name, description, groups=None, parameters=None, active=True):  # pylint: disable=redefined-builtin, invalid-name, unused-argument
