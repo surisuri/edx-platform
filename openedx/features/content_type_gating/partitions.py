@@ -46,7 +46,7 @@ def create_content_gating_partition(course):
 
     partition = content_gate_scheme.create_user_partition(
         id=CONTENT_GATING_PARTITION_ID,
-        name=_(u"Content Type Gating"),
+        name=_(u"Feature-based Enrollments"),
         description=_(u"Partition for segmenting users by access to gated content types"),
         parameters={"course_id": unicode(course.id)}
     )
