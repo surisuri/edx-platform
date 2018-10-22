@@ -62,9 +62,11 @@
             }
             .user-adjusted-grade input {
                 max-width: 50px;
+                height: 18px;
+                padding: 5px 2px;
             }
             .user-grade-comment textarea {
-                max-width: 150px
+                max-width: 150px;
             }
             .grade-override-menu-buttons {
                 padding: 10px;
