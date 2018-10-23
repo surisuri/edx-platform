@@ -4,6 +4,7 @@ Contains code related to computing content gating course duration limits
 and course access based on these limits.
 """
 from datetime import timedelta
+import logging
 
 from django.apps import apps
 from django.utils import timezone
@@ -12,8 +13,11 @@ from django.utils.translation import ugettext as _
 from util.date_utils import DEFAULT_SHORT_DATE_FORMAT, strftime_localized
 from lms.djangoapps.courseware.access_response import AccessError
 from lms.djangoapps.courseware.access_utils import ACCESS_GRANTED
+from openedx.core.djangoapps.catalog.utils import get_course_run_details
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 
+
+logger = logging.getLogger(__name__)
 
 class AuditExpiredError(AccessError):
     """
@@ -44,24 +48,34 @@ def get_user_course_expiration_date(user, course):
     Return course expiration date for given user course pair.
     Return None if the course does not expire.
     """
-    # TODO: Update business logic based on REV-531
+    MIN_DURATION = timedelta(weeks=4)
+    MAX_DURATION = timedelta(weeks=12)
+
     CourseEnrollment = apps.get_model('student.CourseEnrollment')
     enrollment = CourseEnrollment.get_enrollment(user, course.id)
-    if enrollment is None or enrollment.mode == 'verified':
+    if enrollment is None or enrollment.mode != 'audit':
         return None
+
+    discovery_course_details = get_course_run_details(course.id, ['weeks_to_complete'])
+    expected_weeks = discovery_course_details['weeks_to_complete'] or int(MIN_DURATION.days / 7)
 
     try:
         start_date = enrollment.schedule.start
     except CourseEnrollment.schedule.RelatedObjectDoesNotExist:
         start_date = max(enrollment.created, course.start)
 
-    access_duration = timedelta(weeks=8)
-    if hasattr(course, 'pacing') and course.pacing == 'instructor':
-        if course.end and course.start:
-            access_duration = course.end - course.start
+    pacing = getattr(course, 'pacing', None)
 
-    expiration_date = start_date + access_duration
-    return expiration_date
+    access_duration = MIN_DURATION
+    if pacing == 'instructor' and course.end and course.start:
+        access_duration = course.end - course.start
+    elif pacing == 'self':
+        access_duration = timedelta(weeks=expected_weeks)
+
+    access_duration = MIN_DURATION if access_duration < MIN_DURATION else access_duration
+    access_duration = MAX_DURATION if access_duration > MAX_DURATION else access_duration
+
+    return start_date + access_duration
 
 
 def check_course_expired(user, course):
