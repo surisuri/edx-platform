@@ -1,7 +1,7 @@
 
-import ddt
 from datetime import timedelta
 from django.utils.timezone import now
+import ddt
 import mock
 
 
@@ -27,11 +27,13 @@ class CourseExpirationTestCase(ModuleStoreTestCase):
         super(CourseExpirationTestCase, self).tearDown()
 
     def test_enrollment_mode(self):
+        """Tests that verified enrollments do not have an expiration"""
         CourseEnrollment.enroll(self.user, self.course.id, CourseMode.VERIFIED)
         result = get_user_course_expiration_date(self.user, self.course)
         self.assertEqual(result, None)
 
     def test_instructor_paced(self):
+        """Tests that instructor paced courses give the learner start_date - end_date time in the course"""
         expected_difference = timedelta(weeks=6)
         self.course.self_paced = False
         self.course.end = self.course.start + expected_difference
@@ -40,6 +42,7 @@ class CourseExpirationTestCase(ModuleStoreTestCase):
         self.assertEqual(result, enrollment.created + expected_difference)
 
     def test_instructor_paced_no_end_date(self):
+        """Tests that instructor paced with no end dates returns default (minimum)"""
         self.course.self_paced = False
         enrollment = CourseEnrollment.enroll(self.user, self.course.id, CourseMode.AUDIT)
         result = get_user_course_expiration_date(self.user, self.course)
@@ -59,6 +62,10 @@ class CourseExpirationTestCase(ModuleStoreTestCase):
         expected_difference,
         mock_get_course_run_details,
     ):
+        """
+            Tests that self paced courses allow for a (bounded) # of weeks in courses determined via
+            weeks_to_complete field in discovery. If the field doesn't exist, it should return default (minimum)
+        """
         self.course.self_paced = True
         mock_get_course_run_details.return_value = {'weeks_to_complete': weeks_to_complete}
         enrollment = CourseEnrollment.enroll(self.user, self.course.id, CourseMode.AUDIT)
