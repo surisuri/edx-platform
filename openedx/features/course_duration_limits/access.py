@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 MIN_DURATION = timedelta(weeks=4)
 MAX_DURATION = timedelta(weeks=12)
 
+
 class AuditExpiredError(AccessError):
     """
     Access denied because the user's audit timespan has expired
@@ -49,7 +50,7 @@ class AuditExpiredError(AccessError):
 def get_user_course_expiration_date(user, course):
     """
     Return course expiration date for given user course pair.
-    Return None if the course does not expire. 
+    Return None if the course does not expire.
     Defaults to MIN_DURATION.
     """
 

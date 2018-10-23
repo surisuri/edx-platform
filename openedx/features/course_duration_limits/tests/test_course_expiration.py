@@ -12,6 +12,7 @@ from student.tests.factories import UserFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 
+
 @ddt.ddt
 class CourseExpirationTestCase(ModuleStoreTestCase):
     def setUp(self):
@@ -20,11 +21,11 @@ class CourseExpirationTestCase(ModuleStoreTestCase):
             start=now() - timedelta(weeks=10),
         )
         self.user = UserFactory()
-    
+
     def tearDown(self):
         CourseEnrollment.unenroll(self.user, self.course.id)
         super(CourseExpirationTestCase, self).tearDown()
-    
+
     def test_enrollment_mode(self):
         CourseEnrollment.enroll(self.user, self.course.id, CourseMode.VERIFIED)
         result = get_user_course_expiration_date(self.user, self.course)
@@ -37,7 +38,7 @@ class CourseExpirationTestCase(ModuleStoreTestCase):
         enrollment = CourseEnrollment.enroll(self.user, self.course.id, CourseMode.AUDIT)
         result = get_user_course_expiration_date(self.user, self.course)
         self.assertEqual(result, enrollment.created + expected_difference)
-    
+
     def test_instructor_paced_no_end_date(self):
         self.course.self_paced = False
         enrollment = CourseEnrollment.enroll(self.user, self.course.id, CourseMode.AUDIT)
@@ -55,7 +56,7 @@ class CourseExpirationTestCase(ModuleStoreTestCase):
     def test_self_paced_with_weeks_to_complete(
         self,
         weeks_to_complete,
-        expected_difference, 
+        expected_difference,
         mock_get_course_run_details,
     ):
         self.course.self_paced = True
