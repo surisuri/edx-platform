@@ -19,6 +19,9 @@ from openedx.core.djangoapps.content.course_overviews.models import CourseOvervi
 
 logger = logging.getLogger(__name__)
 
+MIN_DURATION = timedelta(weeks=4)
+MAX_DURATION = timedelta(weeks=12)
+
 class AuditExpiredError(AccessError):
     """
     Access denied because the user's audit timespan has expired
@@ -46,31 +49,28 @@ class AuditExpiredError(AccessError):
 def get_user_course_expiration_date(user, course):
     """
     Return course expiration date for given user course pair.
-    Return None if the course does not expire.
+    Return None if the course does not expire. 
+    Defaults to MIN_DURATION.
     """
-    MIN_DURATION = timedelta(weeks=4)
-    MAX_DURATION = timedelta(weeks=12)
+
+    access_duration = MIN_DURATION
 
     CourseEnrollment = apps.get_model('student.CourseEnrollment')
     enrollment = CourseEnrollment.get_enrollment(user, course.id)
     if enrollment is None or enrollment.mode != 'audit':
         return None
 
-    discovery_course_details = get_course_run_details(course.id, ['weeks_to_complete'])
-    expected_weeks = discovery_course_details['weeks_to_complete'] or int(MIN_DURATION.days / 7)
-
     try:
         start_date = enrollment.schedule.start
     except CourseEnrollment.schedule.RelatedObjectDoesNotExist:
         start_date = max(enrollment.created, course.start)
 
-    pacing = getattr(course, 'pacing', None)
-
-    access_duration = MIN_DURATION
-    if pacing == 'instructor' and course.end and course.start:
-        access_duration = course.end - course.start
-    elif pacing == 'self':
+    if course.self_paced:
+        discovery_course_details = get_course_run_details(course.id, ['weeks_to_complete'])
+        expected_weeks = discovery_course_details['weeks_to_complete'] or int(MIN_DURATION.days / 7)
         access_duration = timedelta(weeks=expected_weeks)
+    elif not course.self_paced and course.end and course.start:
+        access_duration = course.end - course.start
 
     access_duration = MIN_DURATION if access_duration < MIN_DURATION else access_duration
     access_duration = MAX_DURATION if access_duration > MAX_DURATION else access_duration
