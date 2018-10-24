@@ -17,8 +17,6 @@ from openedx.core.djangoapps.catalog.utils import get_course_run_details
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 
 
-logger = logging.getLogger(__name__)
-
 MIN_DURATION = timedelta(weeks=4)
 MAX_DURATION = timedelta(weeks=12)
 
@@ -52,6 +50,11 @@ def get_user_course_expiration_date(user, course):
     Return course expiration date for given user course pair.
     Return None if the course does not expire.
     Defaults to MIN_DURATION.
+
+    Business Logic:
+      -
+      - should be bounded with min / max
+      - if fields are missing, default to minimum time
     """
 
     access_duration = MIN_DURATION
@@ -67,14 +70,16 @@ def get_user_course_expiration_date(user, course):
         start_date = max(enrollment.created, course.start)
 
     if course.self_paced:
+        # self-paced expirations should be start date plus the marketing course length discovery
         discovery_course_details = get_course_run_details(course.id, ['weeks_to_complete'])
         expected_weeks = discovery_course_details['weeks_to_complete'] or int(MIN_DURATION.days / 7)
         access_duration = timedelta(weeks=expected_weeks)
     elif not course.self_paced and course.end and course.start:
+        # instructor-paced expirations should be the start date plus the length of the course
         access_duration = course.end - course.start
 
-    access_duration = MIN_DURATION if access_duration < MIN_DURATION else access_duration
-    access_duration = MAX_DURATION if access_duration > MAX_DURATION else access_duration
+    # available course time should bound my the min and max duration
+    access_duration = max(MIN_DURATION, min(MAX_DURATION, access_duration))
 
     return start_date + access_duration
 
