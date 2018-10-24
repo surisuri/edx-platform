@@ -41,5 +41,8 @@ class ContentTypeGateTransformer(BlockStructureTransformer):
                 current_access = block_structure.get_xblock_field(block_key, 'group_access')
                 if current_access is None:
                     current_access = {}
-                current_access.setdefault(CONTENT_GATING_PARTITION_ID, [settings.CONTENT_TYPE_GATE_PARTITION_IDS['unlocked']])
+                current_access.setdefault(
+                    CONTENT_GATING_PARTITION_ID,
+                    [settings.CONTENT_TYPE_GATE_GROUP_IDS['full_access']]
+                )
                 block_structure.override_xblock_field(block_key, 'group_access', current_access)

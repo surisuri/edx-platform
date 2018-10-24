@@ -29,7 +29,10 @@ class ContentTypeGatingFieldOverride(FieldOverrideProvider):
 
         if original_group_access is None:
             original_group_access = {}
-        original_group_access.setdefault(CONTENT_GATING_PARTITION_ID, [settings.CONTENT_TYPE_GATE_PARTITION_IDS['unlocked']])
+        original_group_access.setdefault(
+            CONTENT_GATING_PARTITION_ID,
+            [settings.CONTENT_TYPE_GATE_GROUP_IDS['limited_access']]
+        )
 
         return original_group_access
 
