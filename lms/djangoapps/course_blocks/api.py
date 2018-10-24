@@ -13,7 +13,6 @@ from .transformers import (
     user_partitions,
     visibility,
     load_override_data,
-    content_type_gate,
 )
 from .usage_info import CourseUsageInfo
 
@@ -43,7 +42,6 @@ def get_course_block_access_transformers(user):
     course_block_access_transformers = [
         library_content.ContentLibraryTransformer(),
         start_date.StartDateTransformer(),
-        content_type_gate.ContentTypeGateTransformer(),
         user_partitions.UserPartitionTransformer(),
         visibility.VisibilityTransformer(),
     ]

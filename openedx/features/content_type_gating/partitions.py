@@ -173,6 +173,7 @@ class ContentTypeGatingPartitionScheme(object):
 
         # For now, treat everyone as a Full-access user, until we have the rest of the
         # feature gating logic in place.
+        return cls.FULL_ACCESS
 
     @classmethod
     def create_user_partition(cls, id, name, description, groups=None, parameters=None, active=True):  # pylint: disable=redefined-builtin, invalid-name, unused-argument
